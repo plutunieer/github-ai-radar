@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GitHub AI Radar</title>
+<style>
+  * { box-sizing:border-box; margin:0; }
+  html, body { width:1080px; height:1350px; overflow:hidden; background:#000; }
+  body { font-family:"SF Mono",Menlo,monospace; color:#e8e8ea; position:relative; }
+  canvas { position:absolute; left:0; top:0; }
+  .abs { position:absolute; }
+  .hdr { left:40px; right:40px; top:26px; height:62px; display:flex; align-items:flex-start; gap:34px; }
+  .hdr .title { font-size:22px; font-weight:700; letter-spacing:1px; }
+  .hdr .sub { font-size:11.5px; color:#7d7f88; margin-top:6px; letter-spacing:.5px; }
+  .stat { font-size:10px; color:#7d7f88; letter-spacing:1px; }
+  .stat b { display:block; font-size:18px; color:#e8e8ea; margin-top:5px; font-weight:600; letter-spacing:0; }
+  .live { margin-left:auto; color:#ff4fa3; font-size:15px; font-weight:700; letter-spacing:1px; }
+  .live i { display:inline-block; width:9px; height:9px; border-radius:50%; background:#ff4fa3; margin-right:8px; }
+  .panels { left:40px; right:40px; top:930px; display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .panel { border:1px solid #2a2c33; background:#07080b; height:190px; padding:0; overflow:hidden; }
+  .panel h4 { font-size:12px; font-weight:600; letter-spacing:1px; padding:9px 12px; border-bottom:1px solid #1d1f25; display:flex; justify-content:space-between; }
+  .panel h4 span { color:#ff4fa3; }
+  .pbody { padding:10px 12px; font-size:11.5px; line-height:1.55; color:#aeb0b8; }
+  .bar { display:flex; align-items:center; gap:8px; height:19px; }
+  .bar .l { width:98px; white-space:nowrap; }
+  .bar .t { flex:1; height:7px; background:#16181d; position:relative; }
+  .bar .t i { position:absolute; left:0; top:0; bottom:0; }
+  .bar .v { width:52px; text-align:right; color:#e8e8ea; }
+  .log div { white-space:nowrap; display:flex; justify-content:space-between; }
+  .log div span:last-child { color:#e8e8ea; }
+  .ring { width:84px; height:84px; border-radius:50%; border:2px solid #c6f432; display:flex; align-items:center; justify-content:center; font-size:30px; color:#e8e8ea; }
+  .tag { font-size:13px; font-weight:600; padding:3px 8px; color:#050608; white-space:nowrap; }
+  .verdict { left:0; right:0; top:0; height:920px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:radial-gradient(ellipse at center, #000000e8 0%, #000000c8 45%, #00000000 75%); }
+  .verdict .k { font-size:15px; letter-spacing:4px; color:#38d9f5; }
+  .verdict h1 { font-family:-apple-system,"Helvetica Neue",sans-serif; font-size:84px; line-height:1.02; letter-spacing:-3px; margin-top:18px; font-weight:800; color:#f2f2f4; }
+  .verdict h1 em { font-style:normal; color:#38d9f5; }
+  .verdict p { font-size:19px; color:#aeb0b8; margin-top:22px; line-height:1.6; }
+  .verdict small { font-size:12px; color:#6d6f78; margin-top:26px; }
+  .cap { left:60px; right:60px; top:846px; text-align:center; font-family:-apple-system,"Helvetica Neue",sans-serif; font-size:31px; font-weight:700; letter-spacing:-.5px; color:#f2f2f4; text-shadow:0 2px 14px #000, 0 0 30px #000; }
+  .cap em { font-style:normal; }
+  .focus { left:300px; top:300px; width:480px; padding:24px 26px; background:#07080bf0; border:1px solid #2a2c33; }
+  .focus .fk { font-size:13px; letter-spacing:3px; color:#7d7f88; }
+  .focus h2 { font-family:-apple-system,"Helvetica Neue",sans-serif; font-size:50px; font-weight:800; letter-spacing:-1.5px; margin-top:6px; }
+  .focus .fs { font-size:15px; color:#aeb0b8; margin-top:6px; }
+  .focus .fr { margin-top:16px; border-top:1px solid #1d1f25; padding-top:10px; }
+  .focus .fr div { display:flex; justify-content:space-between; font-size:14px; margin-top:9px; color:#e8e8ea; }
+  .focus .fr small { display:block; color:#7d7f88; font-size:12px; margin-top:1px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1350"></canvas>
+
+<div class="abs hdr" id="hdr">
+  <div><div class="title">GITHUB AI RADAR</div><div class="sub">NEW AI REPOS · LAST 90 DAYS · @bobbyships</div></div>
+  <div class="stat">REPOS<b id="sRepos">0</b></div>
+  <div class="stat">STARS<b id="sStars">0</b></div>
+  <div class="stat">TOPICS<b>29</b></div>
+  <div class="stat">FASTEST<b id="sFast">–</b></div>
+  <div class="stat">BREAKOUTS<b id="sBreak">0</b></div>
+  <div class="live" id="live"><i></i>LIVE</div>
+</div>
+
+<div id="tags"></div>
+<div class="abs focus" id="focus"><div class="fk">TOPIC <span id="fN"></span> / 6</div><h2 id="fName"></h2><div class="fs" id="fStat"></div><div class="fr" id="fTop"></div></div>
+<div class="abs cap" id="cap"></div>
+
+<div class="abs panels" id="panels">
+  <div class="panel"><h4>// SCAN LOG <span id="logN">0</span></h4><div class="pbody log" id="log"></div></div>
+  <div class="panel"><h4>// STARS BY TOPIC <span id="starsN">0</span></h4><div class="pbody" id="bars"></div></div>
+  <div class="panel"><h4>// BREAKOUTS <span>≥100★/DAY</span></h4><div class="pbody" style="display:flex;gap:16px;align-items:center;padding-top:22px">
+    <div class="ring" id="bRing">0</div>
+    <div style="line-height:1.7">repos gaining<br>100+ stars a day<br><span style="color:#38d9f5" id="bAg">agents: 0</span><br><span style="color:#6d6f78">everything else: <span id="bRest">0</span></span></div></div></div>
+  <div class="panel"><h4>// FASTEST <span>★/DAY</span></h4><div class="pbody log" id="top"></div></div>
+  <div class="panel"><h4>// LANGUAGES <span id="langN">5</span></h4><div class="pbody" id="langs"></div></div>
+  <div class="panel"><h4>// VERDICT <span id="vStat">pending</span></h4><div class="pbody" id="verd" style="font-size:13px;line-height:1.6"></div></div>
+</div>
+
+<div class="abs verdict" id="verdict">
+  <div class="k">FASTEST GROWING · LAST 90 DAYS</div>
+  <h1>AI <em>agents</em><br>are eating GitHub.</h1>
+  <p>869 of 2,078 new AI repos · 73% of all stars<br>21 of 31 breakouts are agents</p>
+  <small>sample: AI repos created after Jun 29 with 15+ stars, top 200 per topic · GitHub API · Sep 27, 2026</small>
+</div>
+
+<script src="data.js"></script>
+<script>
+const W = 1080, CX = 540, CY = 505;
+const COLORS = ['#38d9f5', '#ff4fa3', '#c6f432', '#9b7bff', '#ffb347', '#dfe3ea'];
+const CATS = Object.keys(SUM.cat); // order must match fetch_data.py (max 6 colors)
+const $ = id => document.getElementById(id);
+const esc = v => String(v).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const ease = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const P = (t, a, d) => clamp((t - a) / d);
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+// sector layout: angle span per category proportional to repo count
+const counts = CATS.map(c => SUM.cat[c].n), totalN = counts.reduce((a, b) => a + b, 0);
+const GAP = 0.05; let acc = -Math.PI / 2;
+const sectors = counts.map(n => { const span = (Math.PI * 2 - GAP * CATS.length) * n / totalN; const s = { a0: acc, a1: acc + span }; acc += span + GAP; return s; });
+
+// one particle trail per repo: grows from the outer rim inward; faster repos reach closer to the centre
+const R_OUT = 440;
+const repos = REPOS.map(([name, cat, perDay, stars], i) => {
+  const sec = sectors[cat];
+  const ang = sec.a0 + rnd() * (sec.a1 - sec.a0);
+  const target = clamp(415 - 62 * Math.log10(1 + perDay), 150, 420);
+  const pts = []; let a = ang, r = R_OUT + rnd() * 30;
+  const steps = 14 + Math.floor(rnd() * 8);
+  for (let k = 0; k <= steps; k++) {
+    pts.push([a, r]);
+    r -= (r - target) / (steps - k + 1) * (0.8 + rnd() * 0.5);
+    a += (rnd() - .5) * 0.035;
+  }
+  return { name, cat, perDay, stars, pts, t0: 2 + cat * 2.2 + rnd() * 2.2, size: 1 + Math.min(3, Math.log10(1 + stars) / 1.6), breakout: perDay >= 100 };
+});
+// dust ring
+const dust = Array.from({ length: 7000 }, () => { const a = rnd() * Math.PI * 2, r = 300 + Math.pow(rnd(), .6) * 190; return [a, r, rnd(), rnd()]; });
+// breakout sphere nodes (fibonacci sphere)
+const BN = 130;
+const sphere = Array.from({ length: BN }, (_, i) => { const y = 1 - (i / (BN - 1)) * 2, rr = Math.sqrt(1 - y * y), th = i * 2.39996; return [Math.cos(th) * rr, y, Math.sin(th) * rr]; });
+const breakouts = repos.filter(r => r.breakout);
+
+const ctx = $('c').getContext('2d');
+
+// panels content
+const barsEl = $('bars');
+CATS.forEach((c, i) => { barsEl.insertAdjacentHTML('beforeend', `<div class="bar"><span class="l">${c}</span><span class="t"><i id="bar${i}" style="background:${COLORS[i]}"></i></span><span class="v" id="barv${i}">0%</span></div>`); });
+const langEl = $('langs'), langMax = SUM.lang[0][1];
+SUM.lang.forEach(([l, n], i) => langEl.insertAdjacentHTML('beforeend', `<div class="bar"><span class="l">${esc(l)}</span><span class="t"><i id="lang${i}" style="background:#9b7bff"></i></span><span class="v">${Math.round(n / SUM.n * 100)}%</span></div>`));
+const topEl = $('top');
+SUM.top.forEach((r, i) => topEl.insertAdjacentHTML('beforeend', `<div id="top${i}"><span><span style="color:${COLORS[CATS.indexOf(r.cat)]}">■</span> ${esc(r.name.length > 26 ? r.name.slice(0, 25) + '…' : r.name)}</span><span>${Math.round(r.per_day).toLocaleString('en-US')}</span></div>`));
+const LOG = CATS.map((c, i) => [`scan: ${c}`, SUM.cat[c].n]).concat([['rank: ★/day since launch', 'ok'], ['flag: breakouts ≥100★/day', SUM.breakouts], ['verdict', 'agents']]);
+const logEl = $('log');
+LOG.forEach(([a, b], i) => logEl.insertAdjacentHTML('beforeend', `<div id="log${i}"><span>${a}</span><span>${b}</span></div>`));
+$('verd').innerHTML = '<span style="color:#38d9f5">agents</span> lead on every count:<br>most repos · most stars ·<br>most breakouts.';
+
+const TAGS = [
+  [16.0, 'agents · 869 repos', 0], [16.6, 'coding · 385 repos', 1], [17.2, 'deepseek-harness 5,279★/day', 0],
+  [23.0, '21 of 31 breakouts = agents', 0], [17.8, 'jevgrep +554★ on day one', 1], [18.4, 'image/video · 299 repos', 2],
+  [19.0, 'rag · 192 repos', 3], [19.6, 'voice · 200 repos', 4], [20.2, 'local models · 133 repos', 5],
+  [20.8, 'agents = 73% of all stars', 0], [21.4, 'Python 38% · TypeScript 21%', 6],
+];
+const tagsEl = $('tags');
+const TAG_POS = [[745, 170], [420, 815], [700, 300], [610, 640], [150, 735], [55, 520], [110, 245], [235, 125], [540, 105], [735, 470], [690, 780]];
+TAGS.forEach((tg, i) => {
+  const [t0, text, cat] = tg;
+  tagsEl.insertAdjacentHTML('beforeend', `<div class="abs tag" id="tag${i}" style="background:${cat === 6 ? '#9aa0ab' : COLORS[cat]};left:${TAG_POS[i][0]}px;top:${TAG_POS[i][1]}px">${text}</div>`);
+});
+
+const DESC = {
+  'deepseek-ai/deepseek-harness': 'everything is a plugin', 'lemomo-ai/lemo-opuscar': '39 film-style prompts', 'hypit-ai/hypit': 'clone viral videos with agents',
+  'dzhng/jevgrep': 'find code by asking what it does', 'lnkiai/m3e-canvas': 'sketch Material 3 screens', 'yetone/magpie': "every agent's model, one place",
+  's1dashu/ip-as-logo-skill': 'agent skill for simple logos', 'Finderchangchang/brewreel': 'promo videos from cheap models', 'joeseesun/opus-video-prompts': 'prompts for code-made videos',
+  'deeplethe/utopia': 'open-source enterprise world model', 'youngyangyang04/llm-master': 'LLM learning roadmap', 'xerj-org/xerj': 'a new way for AI to search data',
+  'Tencent-Hunyuan/AuK': 'open speech generation model', 'ChenShuo2004/cs-board': 'voice + text → whiteboard video', 'jxlarrea/kiosk-satellite': 'Android as a voice kiosk',
+  'ollaya-dev/ollaya': 'run decision models locally', 'syv-ai/HyperQwen': 'big Qwen models on your own GPUs', 'georgeding/Relate': 'self-hosted AI chief of staff',
+};
+const INSIGHT = [
+  'Agents: <em style="color:#38d9f5">73% of all stars.</em> The biggest wave by far.',
+  'Coding tools: <em style="color:#ff4fa3">the second-fastest growers.</em>',
+  'Image & video: <em style="color:#c6f432">299 repos, 5% of stars.</em>',
+  'RAG: <em style="color:#9b7bff">the slowest growth of all six.</em>',
+  'Voice: <em style="color:#ffb347">200 repos, led by Tencent.</em>',
+  'Local models: <em style="color:#dfe3ea">the smallest group, 133 repos.</em>',
+];
+const TOUR0 = 28, TOURD = 10;
+const CAPS = [
+  [2.5, 8.5, 'Every dot is a new AI repo on GitHub.'],
+  [8.8, 15, 'Color = topic. Closer to the center = <em style="color:#38d9f5">growing faster.</em>'],
+  [15.3, 21.5, '2,078 repos. 928,029 stars. Last 90 days.'],
+  [21.8, 27.6, 'In the middle: <em style="color:#9b7bff">31 breakouts</em> with 100+ stars a day.'],
+  ...INSIGHT.map((c, i) => [TOUR0 + i * TOURD + 0.4, TOUR0 + (i + 1) * TOURD - 0.2, c]),
+  [88.3, 95, 'Fastest of all: <em style="color:#38d9f5">deepseek-harness, 5,279 stars a day.</em>'],
+  [95.3, 101.5, '<em style="color:#38d9f5">21 of the 31 breakouts</em> are agents.'],
+];
+const DURATION = 115;
+
+function render(t) {
+  const tourI = t >= TOUR0 && t < TOUR0 + 6 * TOURD ? Math.floor((t - TOUR0) / TOURD) : -1;
+  const tourV = Math.min(ease(P(t, TOUR0, 1)), 1 - ease(P(t, TOUR0 + 6 * TOURD - 1, 1)));
+  const zoom = 1 + 0.12 * ease(P(t, 18, 6)) - 0.12 * ease(P(t, 100, 3));
+  const rot = Math.max(0, t - 28) * 0.02;
+  const endDim = ease(P(t, 101.5, 1.5));
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, 1350);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, 92, W, 830); ctx.clip();
+  ctx.translate(CX, CY); ctx.scale(zoom, zoom * 0.78); ctx.translate(-CX, -CY);
+  const dv = ease(P(t, .3, 2));
+  for (let i = 0; i < dust.length; i++) {
+    const [a, r, s, b] = dust[i]; const aa = a + rot * (0.5 + s * .5);
+    ctx.fillStyle = `rgba(210,215,230,${(0.08 + b * 0.25) * dv})`;
+    ctx.fillRect(CX + Math.cos(aa) * r, CY + Math.sin(aa) * r, 1.3, 1.3);
+  }
+  // per-category visibility: during the tour only the focused topic is bright; late part highlights agents
+  const catAlpha = c => {
+    let a = 1;
+    if (tourI >= 0) a = c === tourI ? 1 : 1 - 0.8 * tourV;
+    else if (t >= 95 && t < 101.5) a = c === 0 ? 1 : 1 - 0.7 * ease(P(t, 95, 1));
+    return a * (1 - 0.55 * endDim);
+  };
+  for (const rp of repos) {
+    const g = ease(P(t, rp.t0, 3.5)); if (g <= 0) continue;
+    const n = Math.max(2, Math.ceil(rp.pts.length * g));
+    const col = COLORS[rp.cat], fade = catAlpha(rp.cat);
+    ctx.globalAlpha = 0.55 * fade; ctx.strokeStyle = col; ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    for (let k = 0; k < n; k++) { const [a, r] = rp.pts[k]; const x = CX + Math.cos(a + rot) * r, y = CY + Math.sin(a + rot) * r; k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    ctx.stroke();
+    ctx.globalAlpha = 0.9 * fade; ctx.fillStyle = col;
+    for (let k = 0; k < n; k += 2) { const [a, r] = rp.pts[k]; ctx.fillRect(CX + Math.cos(a + rot) * r, CY + Math.sin(a + rot) * r, 1.2, 1.2); }
+    const [ha, hr] = rp.pts[n - 1];
+    ctx.globalAlpha = fade; ctx.beginPath(); ctx.arc(CX + Math.cos(ha + rot) * hr, CY + Math.sin(ha + rot) * hr, rp.size * (rp.breakout ? 1.6 : 0.8), 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1; ctx.restore();
+
+  // breakout sphere (hidden behind the focus card during the tour)
+  const sv = ease(P(t, 21.5, 2)) * (1 - 0.85 * tourV) * (1 - 0.6 * endDim);
+  if (sv > 0.01) {
+    ctx.save(); ctx.translate(CX, CY);
+    const s = 118 * zoom * (1 + 0.25 * ease(P(t, 88, 2)) - 0.25 * ease(P(t, 100, 2))), ry = t * 0.4, rx = 0.45;
+    const proj = sphere.map(([x, y, z]) => { const x1 = x * Math.cos(ry) - z * Math.sin(ry), z1 = x * Math.sin(ry) + z * Math.cos(ry); const y1 = y * Math.cos(rx) - z1 * Math.sin(rx), z2 = y * Math.sin(rx) + z1 * Math.cos(rx); return [x1 * s, y1 * s, z2]; });
+    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 0.9); glow.addColorStop(0, `rgba(155,123,255,${.55 * sv})`); glow.addColorStop(1, 'rgba(155,123,255,0)');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, 0, s, 0, 7); ctx.fill();
+    ctx.lineWidth = 0.8;
+    for (let i = 0; i < BN; i++) for (let j = i + 1; j < BN; j++) {
+      const a = sphere[i], b = sphere[j]; const d = (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+      if (d < 0.14) { const depth = (proj[i][2] + proj[j][2] + 2) / 4; ctx.strokeStyle = COLORS[(i + j) % 3 === 0 ? 0 : (i % 5 === 0 ? 1 : (i % 7 === 0 ? 2 : 3))]; ctx.globalAlpha = (0.15 + depth * 0.6) * sv; ctx.beginPath(); ctx.moveTo(proj[i][0], proj[i][1]); ctx.lineTo(proj[j][0], proj[j][1]); ctx.stroke(); }
+    }
+    proj.forEach(([x, y, z], i) => { ctx.globalAlpha = (0.3 + (z + 1) * 0.35) * sv; ctx.fillStyle = i < breakouts.length ? COLORS[breakouts[i].cat] : '#e8e8ea'; ctx.beginPath(); ctx.arc(x, y, i < breakouts.length ? 3.2 : 1.6, 0, 7); ctx.fill(); });
+    ctx.restore(); ctx.globalAlpha = 1;
+  }
+
+  // header
+  const scan = ease(P(t, 2, 14));
+  $('sRepos').textContent = Math.round(SUM.n * scan).toLocaleString('en-US');
+  $('sStars').textContent = Math.round(SUM.stars * scan).toLocaleString('en-US');
+  $('sFast').textContent = t > 17.2 ? Math.round(SUM.top[0].per_day).toLocaleString('en-US') + '★/d' : '–';
+  $('sBreak').textContent = Math.round(SUM.breakouts * ease(P(t, 21.5, 2)));
+  $('live').style.opacity = Math.floor(t * 2) % 2 ? 1 : .45;
+  $('hdr').style.opacity = ease(P(t, 0, .8));
+
+  // tags: visible before the tour, gone during it
+  TAGS.forEach(([t0], i) => { const el = $('tag' + i); const v = Math.min(ease(P(t, t0, .35)), 1 - ease(P(t, TOUR0 - 0.8, .5))); el.style.opacity = v; el.style.transform = `scale(${.7 + .3 * v})`; });
+
+  // focus card
+  const fc = $('focus');
+  if (tourI >= 0) {
+    const c = CATS[tourI], lt = t - TOUR0 - tourI * TOURD;
+    const v = Math.min(ease(P(lt, 0.2, .6)), 1 - ease(P(lt, TOURD - 0.8, .6))) * tourV;
+    fc.style.opacity = v; fc.style.transform = `translateY(${(1 - v) * 14}px)`;
+    $('fN').textContent = tourI + 1;
+    const h = $('fName'); h.textContent = c; h.style.color = COLORS[tourI];
+    $('fStat').textContent = `${SUM.cat[c].n} repos · ${Math.round(SUM.cat[c].stars / SUM.stars * 100)}% of stars · median ${TOPCAT[c].median}★/day`;
+    const html = '<div style="color:#7d7f88;font-size:12px;letter-spacing:2px;margin-top:0">FASTEST · ★/DAY</div>' + TOPCAT[c].top.map((r, k) => `<div style="opacity:${lt > 1.4 + k * 0.7 ? 1 : 0}"><span>${esc(r.name)}<small>${esc(DESC[r.name] || '')}</small></span><span>${Math.round(r.per_day).toLocaleString('en-US')}</span></div>`).join('');
+    if ($('fTop').innerHTML !== html) $('fTop').innerHTML = html;
+  } else { fc.style.opacity = 0; }
+
+  // caption
+  let ch = '', cv = 0;
+  CAPS.forEach(([a, b, h]) => { if (t >= a && t < b) { ch = h; cv = Math.min(ease(P(t, a, .4)), 1 - ease(P(t, b - .4, .4))); } });
+  const capEl = $('cap'); if (capEl.innerHTML !== ch) capEl.innerHTML = ch;
+  capEl.style.opacity = cv; capEl.style.transform = `translateY(${(1 - cv) * 10}px)`;
+
+  // panels
+  $('panels').style.opacity = ease(P(t, .6, 1));
+  LOG.forEach((_, i) => $('log' + i).style.opacity = t > 2.5 + i * 2 ? 1 : 0);
+  $('logN').textContent = Math.min(LOG.length, Math.max(0, Math.floor((t - 2.5) / 2) + 1));
+  CATS.forEach((c, i) => { const share = SUM.cat[c].stars / SUM.stars; const g = ease(P(t, 3 + i * 2.2, 2)); const b = $('bar' + i); b.style.width = (share * 100 * g) + '%'; b.parentElement.parentElement.style.opacity = tourI < 0 || tourI === i ? 1 : .3; $('barv' + i).textContent = Math.round(share * 100 * g) + '%'; });
+  $('starsN').textContent = Math.round(SUM.stars * scan / 1000) + 'k';
+  const bb = ease(P(t, 21.5, 2));
+  $('bRing').textContent = Math.round(SUM.breakouts * bb); $('bAg').textContent = 'agents: ' + Math.round(SUM.breakouts_agents * bb); $('bRest').textContent = Math.round((SUM.breakouts - SUM.breakouts_agents) * bb);
+  SUM.top.forEach((_, i) => $('top' + i).style.opacity = t > 17.2 + i * 0.6 ? 1 : 0);
+  SUM.lang.forEach(([, n], i) => $('lang' + i).style.width = (n / langMax * 100 * ease(P(t, 12 + i * .5, 1.5))) + '%');
+  const vd = t > 96; $('verd').style.opacity = vd ? 1 : 0; $('vStat').textContent = vd ? 'done' : 'pending';
+
+  // verdict
+  const vv = ease(P(t, 101.5, 1.2));
+  $('verdict').style.opacity = vv;
+  [...$('verdict').children].forEach((c, i) => { const q = ease(P(t, 101.8 + i * 0.4, .8)); c.style.opacity = q; c.style.transform = `translateY(${(1 - q) * 16}px)`; });
+}
+window.render = render; window.DURATION = DURATION;
+if (!location.search.includes('capture')) { const s0 = performance.now(); const loop = () => { render(((performance.now() - s0) / 1000) % DURATION); requestAnimationFrame(loop); }; loop(); } else render(0);
+</script>
+</body>
+</html>

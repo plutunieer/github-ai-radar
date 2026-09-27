@@ -1,0 +1,9 @@
+node_modules/
+frames/
+still-*.png
+*.mp4
+*.mp3
+.DS_Store
+__pycache__/
+*.pyc
+.env

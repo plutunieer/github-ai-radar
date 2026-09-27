@@ -1,0 +1,9 @@
+{
+  "name": "github-ai-radar",
+  "version": "1.0.0",
+  "description": "Animated radar of new AI repos on GitHub, rendered to video from code",
+  "private": true,
+  "scripts": { "render": "node render.js" },
+  "dependencies": { "playwright-core": "^1.63.0" },
+  "license": "MIT"
+}
